@@ -16,8 +16,10 @@ Dataflow connections:
 import json
 import math
 import os
+import socket
 import struct
 import sys
+import threading
 import time
 
 import numpy as np
@@ -361,6 +363,66 @@ class NavBridge:
         return _result(f"Unknown tool: {tool}", {"error": "unknown_tool"})
 
 
+BRIDGE_SOCK = "/tmp/octos_dora_bridge.sock"
+
+
+def _run_socket_server(bridge_ref):
+    """Listen for tool calls from the MCP bridge via Unix socket.
+
+    Each connection sends one JSON request and receives one JSON response.
+    Runs in a background thread so the dora event loop stays unblocked.
+    """
+    # Clean up stale socket
+    try:
+        os.unlink(BRIDGE_SOCK)
+    except FileNotFoundError:
+        pass
+
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(BRIDGE_SOCK)
+    server.listen(5)
+    server.settimeout(1.0)
+    print(f"[nav-bridge] Socket server listening on {BRIDGE_SOCK}")
+
+    while True:
+        try:
+            conn, _ = server.accept()
+        except socket.timeout:
+            continue
+        except OSError:
+            break
+
+        try:
+            data = conn.recv(65536)
+            if not data:
+                conn.close()
+                continue
+
+            request = json.loads(data.decode().strip())
+            tool = request.get("tool", "")
+            args = request.get("args", {})
+            print(f"[nav-bridge] Socket call: {tool}({args})")
+
+            # Build a fake event for handle_skill_request
+            payload = json.dumps(request).encode("utf-8")
+            fake_event = {
+                "type": "INPUT",
+                "id": "skill_request",
+                "value": pa.array(list(payload), type=pa.uint8()),
+            }
+
+            result_arr = bridge_ref.handle_skill_request(fake_event)
+            # result_arr is a pa.Array of uint8 — convert back to JSON bytes
+            result_bytes = bytes(result_arr.to_pylist())
+            conn.sendall(result_bytes)
+            print(f"[nav-bridge] Socket result sent ({len(result_bytes)} bytes)")
+        except Exception as e:
+            err = json.dumps(["Error: " + str(e), {"error": str(e)}])
+            conn.sendall(err.encode())
+        finally:
+            conn.close()
+
+
 def main():
     node = Node()
     bridge = NavBridge(node)
@@ -388,6 +450,10 @@ def main():
     # In standalone mode (no robot-edge-a), always forward nav commands
     bridge.nav_forwarding = True
     print("[nav-bridge] Nav skill bridge ready — 6 tools, nav forwarding enabled")
+
+    # Start socket server for MCP bridge (octos serve → dora)
+    sock_thread = threading.Thread(target=_run_socket_server, args=(bridge,), daemon=True)
+    sock_thread.start()
 
     while True:
         event = node.next(timeout=0.1)
