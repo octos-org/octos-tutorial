@@ -1,6 +1,6 @@
 # 05 — SLAM Navigation Simulation
 
-Visual MuJoCo simulation where a Hunter SE robot navigates a warehouse. 5 dataflows demonstrate progressive octos integration.
+Visual MuJoCo simulation where a Hunter SE robot navigates a warehouse. 6 dataflows demonstrate progressive octos integration from pure nav to obstacle avoidance.
 
 ## Background
 
@@ -119,5 +119,9 @@ mujoco-sim → pose-extractor → road-lane-pub ← pub-road
 | `nodes/pose_extractor_node.py` | Extract Pose2D from MuJoCo qpos |
 | `nodes/rerun_viz_node.py` | Rerun 3D visualization |
 | `nodes/octos_robot_edge_node.py` | Octos LLM agent (nav-only) |
+| `nodes/obstacle_detector_node.py` | LiDAR → obstacle list (ground filter + clustering) |
+| `nodes/costmap_node.py` | LiDAR → 2D occupancy grid with inflation |
+| `nodes/recovery_monitor_node.py` | Stuck detection + recovery commands |
 | `Waypoints.txt` | 1065 waypoints (52.8m warehouse path) |
+| `table_scene_lms400.pcd` | Test pointcloud for obstacle visualization |
 | `models/hunter_se_warehouse.xml` | MuJoCo Hunter SE + warehouse model |

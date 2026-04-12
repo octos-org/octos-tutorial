@@ -9,9 +9,10 @@ Hands-on examples for building industrial robot agents with [octos](https://gith
 | 01 | [Pipeline Basics](01-pipeline-basics/) | DOT pipeline engine, deterministic tool execution | dora-rs only |
 | 02 | [Safety Tiers](02-safety-tiers/) | Permission gating, tier-based tool authorization | dora-rs only |
 | 03 | [LLM Agent](03-llm-agent/) | Free-form LLM reasoning, replanning on failure | dora-rs + Ollama |
-| 05 | [SLAM Nav Sim](05-slam-nav-sim/) | Visual MuJoCo simulation, full navigation pipeline | dora-rs + MuJoCo + Rerun |
+| 04 | [Human Gate](04-human-gate/) | Operator approval gates, human-in-the-loop control | dora-rs only |
+| 05 | [SLAM Nav Sim](05-slam-nav-sim/) | Visual MuJoCo simulation, obstacle avoidance | dora-rs + MuJoCo + Rerun |
 
-Examples 01-02 run in under 5 minutes with just `pip install dora-rs pyarrow numpy`.
+Examples 01-04 run in under 5 minutes with just `pip install dora-rs pyarrow numpy`.
 
 ## Quick Start
 

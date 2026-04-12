@@ -89,4 +89,4 @@ Station B: also blocked. Returned home successfully.
 
 ## Next
 
-Try [05-slam-nav-sim](../05-slam-nav-sim/) for visual MuJoCo simulation.
+Try [04-human-gate](../04-human-gate/) for operator approval gates.
