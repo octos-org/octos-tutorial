@@ -57,22 +57,7 @@ You also need:
 | `dataflow_octos_replan.yaml` | Obstacle at y=8, LLM agent replans | Yes |
 | `dataflow_octos_safety.yaml` | Observe-only tier blocks navigation | Yes |
 | `dataflow_octos_cyclic.yaml` | 2-loop continuous patrol | No |
-
-### Obstacle Avoidance (from dora-nav)
-
-The full obstacle avoidance pipeline lives in the [dora-nav](https://github.com/dora-rs/DORA_NAV) repo:
-
-```bash
-cd /path/to/dora-nav
-dora up && dora start python/dataflow_python.yaml
-```
-
-This adds 3 nodes on top of the base nav pipeline:
-- **obstacle-detector** — LiDAR pointcloud → obstacle list (clustering + ground filtering)
-- **costmap** — LiDAR pointcloud → 2D occupancy grid with inflation
-- **recovery-monitor** — stuck detection + recovery commands
-
-The planning and rerun nodes in this example are already updated to consume those inputs when available.
+| `dataflow_obstacle_avoidance.yaml` | Nav + obstacle detection + costmap + recovery | No |
 
 ## Setup (macOS)
 
