@@ -1,0 +1,38 @@
+// patrol.dot — Simple patrol: check state → A → B → home
+//
+// Each node has tool= and args= attributes for direct execution.
+// No LLM needed — the pipeline engine calls tools in order.
+
+digraph patrol {
+    label = "Station Patrol";
+
+    check [
+        label="check_state"
+        tool="get_robot_state"
+    ];
+
+    nav_a [
+        label="navigate_to_A"
+        tool="navigate_to"
+        args='{"waypoint": "A"}'
+        checkpoint="at_A"
+    ];
+
+    nav_b [
+        label="navigate_to_B"
+        tool="navigate_to"
+        args='{"waypoint": "B"}'
+        checkpoint="at_B"
+    ];
+
+    nav_home [
+        label="navigate_home"
+        tool="navigate_to"
+        args='{"waypoint": "home"}'
+        checkpoint="at_home"
+    ];
+
+    check -> nav_a;
+    nav_a -> nav_b;
+    nav_b -> nav_home;
+}

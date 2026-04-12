@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+out/
+.DS_Store
+CLAUDE.md
+
+# slam-nav-sim local symlinks
+05-slam-nav-sim/dora-mujoco
+05-slam-nav-sim/models/hunter_se
+05-slam-nav-sim/models/GEN72
