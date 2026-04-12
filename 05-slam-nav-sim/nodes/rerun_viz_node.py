@@ -201,6 +201,77 @@ def main():
                 rr.log("path_points", rr.LineStrips3D(
                     [global_path], colors=[[0, 0, 255, 255]], radii=[0.08]))
 
+        # ---- Obstacle boxes ----
+        elif eid == "obstacle_list":
+            if len(raw) < 4:
+                continue
+            num_obs = struct.unpack_from('<I', raw, 0)[0]
+            if num_obs == 0:
+                rr.log("obstacles", rr.Clear(recursive=True))
+                continue
+
+            centers = []
+            half_sizes = []
+            colors = []
+            labels = []
+            for i in range(num_obs):
+                off = 4 + i * 44
+                if off + 44 > len(raw):
+                    break
+                vals = struct.unpack_from('<I2f2f2f3ff', raw, off)
+                obs_id, ox, oy, os_val, od, ovx, ovy, ol, ow, oh, odist = vals
+                centers.append([ox, oy, oh / 2.0])
+                half_sizes.append([ol / 2.0, ow / 2.0, oh / 2.0])
+                colors.append([255, 0, 0, 200])
+                labels.append(f"#{obs_id} d={odist:.1f}m")
+
+            if centers:
+                rr.log("obstacles", rr.Boxes3D(
+                    centers=centers,
+                    half_sizes=half_sizes,
+                    colors=colors,
+                    labels=labels,
+                ))
+
+        # ---- Costmap heatmap ----
+        elif eid == "costmap_grid":
+            if len(raw) < 28:
+                continue
+            origin_x, origin_y, resolution = struct.unpack_from('<fff', raw, 0)
+            width, height = struct.unpack_from('<II', raw, 12)
+            robot_x, robot_y = struct.unpack_from('<ff', raw, 20)
+
+            grid_start = 28
+            grid_size = width * height
+            if len(raw) < grid_start + grid_size:
+                continue
+
+            grid = np.frombuffer(raw[grid_start:grid_start + grid_size], dtype=np.uint8)
+            grid = grid.reshape((height, width))
+
+            occupied = np.argwhere(grid > 0)
+            if len(occupied) == 0:
+                rr.log("costmap", rr.Clear(recursive=True))
+                continue
+
+            cell_y = occupied[:, 0]
+            cell_x = occupied[:, 1]
+            gx = origin_x + (cell_x + 0.5) * resolution
+            gy = origin_y + (cell_y + 0.5) * resolution
+            gz = np.full_like(gx, -0.05)
+
+            costs = grid[cell_y, cell_x]
+
+            # Yellow for inflated (cost < 254), red for fully occupied (cost >= 254)
+            costmap_colors = np.zeros((len(costs), 4), dtype=np.uint8)
+            occupied_mask = costs >= 254
+            costmap_colors[occupied_mask] = [255, 0, 0, 180]
+            costmap_colors[~occupied_mask] = [255, 255, 0, 100]
+
+            pts = np.stack([gx, gy, gz], axis=1).astype(np.float32)
+            rr.log("costmap", rr.Points3D(
+                pts, colors=costmap_colors, radii=[resolution / 2.0]))
+
     print("[rerun] Node stopped")
 
 
