@@ -1,0 +1,16 @@
+{
+  "provider": "openai",
+  "model": "qwen3:8b",
+  "api_key_env": "OPENAI_API_KEY",
+  "api_base": "http://localhost:11434/v1",
+  "system_prompt": "You are an octos robot agent controlling a Hunter SE mobile base in a warehouse. You have navigation tools to patrol stations. Always check robot state before navigating. If navigation fails, adapt your plan.",
+  "mcp_servers": [
+    {
+      "command": "python3",
+      "args": ["octos-config/mcp_dora_bridge.py"],
+      "env": {
+        "DORA_TOOL_MAP": "nav_tool_map.json"
+      }
+    }
+  ]
+}

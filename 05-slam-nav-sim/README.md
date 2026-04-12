@@ -90,6 +90,24 @@ dora up && dora start dataflow_octos_nav.yaml --attach
 dora up && dora start dataflow_octos_replan.yaml --attach
 ```
 
+### Octos serve + dora (Approach B — production pattern)
+
+Uses `octos serve` as the agent brain with the full Rust octos-agent crate (hooks, MCP, memory, compaction). The MCP bridge connects octos to the dora dataflow.
+
+```bash
+./start_octos_serve.sh
+# Opens http://localhost:3141 — send commands via web dashboard
+# Or: octos chat (in another terminal)
+```
+
+```
+octos serve (Rust agent + LLM)
+    ↕ MCP stdio protocol
+mcp_dora_bridge.py (tool forwarder)
+    ↕ Unix socket
+dora dataflow (nav-bridge + sim + planning)
+```
+
 ## Architecture
 
 ```
