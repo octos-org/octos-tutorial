@@ -1,0 +1,146 @@
+# dataflow_octos_nav.yaml — Octos-driven SLAM navigation with pipeline engine
+#
+# Extends the all-Python nav sim with an octos agent (robot-edge-a) that
+# executes a DOT pipeline (patrol_mission.dot) to navigate the robot
+# through stations A → B → home with deadlines, invariants, and checkpoints.
+#
+# No LLM required — the pipeline engine executes tool calls directly from
+# the DOT graph attributes (tool="navigate_to", args='{"waypoint":"A"}').
+#
+# 11-node dataflow: 10 nav nodes + 1 octos agent
+#
+# Prerequisites:
+#   pip install dora-rs mujoco rerun-sdk pyarrow numpy
+#
+# Run:
+#   dora up && dora start dataflow_octos_nav.yaml --attach
+
+nodes:
+  # =======================================
+  # MuJoCo Simulation (Hunter SE + warehouse)
+  # =======================================
+
+  - id: mujoco-sim
+    path: dora-mujoco/dora_mujoco/main.py
+    inputs:
+      tick: dora/timer/millis/10
+      wheel_control: nav-bridge/wheel_commands
+    outputs:
+      - joint_positions
+    env:
+      MODEL_NAME: models/hunter_se_warehouse.xml
+      MUJOCO_GL: cgl
+      NAV_MODE: "1"
+      PHYSICS_STEPS: "5"
+
+  # =======================================
+  # Pose Extractor (qpos → Pose2D_h)
+  # =======================================
+
+  - id: pose-extractor
+    path: nodes/pose_extractor_node.py
+    inputs:
+      joint_positions: mujoco-sim/joint_positions
+    outputs:
+      - ground_truth_pose
+
+  # =======================================
+  # Navigation Pipeline (Python)
+  # =======================================
+
+  - id: pub-road
+    path: nodes/pub_road_node.py
+    inputs:
+      tick: dora/timer/millis/200
+    outputs:
+      - road_lane
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+
+  - id: road-lane-publisher
+    path: nodes/road_lane_publisher_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose: pose-extractor/ground_truth_pose
+    outputs:
+      - cur_pose_all
+
+  - id: task-pub-stub
+    path: nodes/task_pub_stub.py
+    inputs:
+      tick: dora/timer/millis/100
+    outputs:
+      - road_attri_msg
+
+  - id: planning
+    path: nodes/planning_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose_all: road-lane-publisher/cur_pose_all
+      road_attri_msg: task-pub-stub/road_attri_msg
+    outputs:
+      - raw_path
+      - Request
+
+  - id: lon-control
+    path: nodes/lon_controller_node.py
+    inputs:
+      Request: planning/Request
+    outputs:
+      - TrqBreCmd
+
+  - id: lat-control
+    path: nodes/lat_controller_node.py
+    inputs:
+      raw_path: planning/raw_path
+    outputs:
+      - SteeringCmd
+
+  # =======================================
+  # Rerun 3D Visualization
+  # =======================================
+
+  - id: rerun
+    path: nodes/rerun_viz_node.py
+    inputs:
+      raw_path: planning/raw_path
+      cur_pose: pose-extractor/ground_truth_pose
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+      MAP_PCD_FILE: ""
+
+  # =======================================
+  # Navigation Bridge (dora-nav → wheels + skill execution)
+  # =======================================
+
+  - id: nav-bridge
+    path: nodes/nav_bridge_node.py
+    inputs:
+      skill_request: robot-edge-a/skill_request
+      ground_truth_pose: pose-extractor/ground_truth_pose
+      SteeringCmd: lat-control/SteeringCmd
+      TrqBreCmd: lon-control/TrqBreCmd
+    outputs:
+      - skill_result
+      - wheel_commands
+
+  # =======================================
+  # Octos Agent (pipeline-driven, no LLM)
+  # =======================================
+
+  - id: robot-edge-a
+    path: nodes/octos_robot_edge_node.py
+    inputs:
+      skill_result: nav-bridge/skill_result
+    outputs:
+      - agent_registration
+      - result
+      - agent_status
+      - environment_update
+      - skill_request
+    env:
+      ROBOT_NAME: demo_robot
+      OCTOS_PROVIDER: "mock"
+      OCTOS_SKILLS_DIR: "skills/robot/"
+      OCTOS_PIPELINE: "patrol_mission.dot"
+      USER_COMMAND: "Execute the patrol mission: navigate to all stations and return home"

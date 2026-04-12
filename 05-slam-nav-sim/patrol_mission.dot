@@ -1,0 +1,95 @@
+// patrol_mission.dot — Navigation patrol with octos pipeline features
+//
+// Demonstrates: deadlines, invariants, checkpoints from octos-pipeline.
+// Robot patrols: home → A → B → home with safety checks at each stop.
+//
+// Usage: OCTOS_PIPELINE=examples/slam-nav-sim/patrol_mission.dot
+
+digraph patrol_mission {
+    // Pipeline metadata
+    label = "SLAM Nav Patrol Mission";
+    deadline = "300";           // 5-minute mission deadline
+    checkpoint_dir = "/tmp/octos_patrol";
+
+    // Start: check robot state
+    start [label="start"];
+    check_state [
+        label="check_state"
+        tool="get_robot_state"
+        invariant="base_position != null"
+    ];
+
+    // Get map for planning
+    get_map [
+        label="get_map"
+        tool="get_map"
+    ];
+
+    // Navigate to station A
+    nav_a [
+        label="navigate_to_A"
+        tool="navigate_to"
+        args="{\"waypoint\": \"A\"}"
+        deadline="120"
+        deadline_action="abort"
+        invariant="position == 'A'"
+        checkpoint="reached_A"
+    ];
+
+    // Read LiDAR at A
+    lidar_a [
+        label="lidar_check_A"
+        tool="read_lidar"
+    ];
+
+    // Navigate to station B
+    nav_b [
+        label="navigate_to_B"
+        tool="navigate_to"
+        args="{\"waypoint\": \"B\"}"
+        deadline="120"
+        deadline_action="abort"
+        invariant="position == 'B'"
+        checkpoint="reached_B"
+    ];
+
+    // Read LiDAR at B
+    lidar_b [
+        label="lidar_check_B"
+        tool="read_lidar"
+    ];
+
+    // Return home
+    nav_home [
+        label="navigate_home"
+        tool="navigate_to"
+        args="{\"waypoint\": \"home\"}"
+        deadline="120"
+        deadline_action="abort"
+        checkpoint="returned_home"
+    ];
+
+    // Final state check
+    final_check [
+        label="final_check"
+        tool="get_robot_state"
+    ];
+
+    // Report
+    report [
+        label="report"
+        tool="dora_alert"
+        args="{\"severity\": \"info\", \"message\": \"Nav patrol complete: home → A → B → home\"}"
+    ];
+
+    // Edges
+    start -> check_state;
+    check_state -> get_map;
+    get_map -> nav_a;
+    nav_a -> lidar_a;
+    lidar_a -> nav_b;
+    nav_b -> lidar_b;
+    lidar_b -> nav_home;
+    nav_home -> final_check;
+    final_check -> report;
+}

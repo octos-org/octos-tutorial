@@ -1,0 +1,124 @@
+# dataflow_nav_sim_py.yaml — All-Python SLAM navigation simulation
+#
+# Same 9-node topology as dataflow_nav_sim.yaml but with all dora-nav
+# C++ nodes replaced by Python equivalents. Runs on macOS and Linux
+# without requiring dora-nav C++ builds.
+#
+# Adds pose-extractor node to bridge local dora-mujoco (which only outputs
+# joint_positions) to the nav pipeline (which needs ground_truth_pose).
+#
+# Prerequisites:
+#   pip install dora-rs mujoco rerun-sdk pyarrow numpy
+#
+# Run:
+#   dora up && dora start dataflow_nav_sim_py.yaml --attach
+
+nodes:
+  # =======================================
+  # MuJoCo Simulation (Hunter SE + warehouse)
+  # =======================================
+
+  - id: mujoco-sim
+    path: dora-mujoco/dora_mujoco/main.py
+    inputs:
+      tick: dora/timer/millis/10
+      wheel_control: nav-bridge/wheel_commands
+    outputs:
+      - joint_positions
+    env:
+      MODEL_NAME: models/hunter_se_warehouse.xml
+      MUJOCO_GL: cgl
+      NAV_MODE: "1"
+      PHYSICS_STEPS: "5"
+
+  # =======================================
+  # Pose Extractor (qpos → Pose2D_h)
+  # =======================================
+  # Local dora-mujoco only outputs joint_positions.
+  # This node extracts (x, y, theta) as Pose2D_h for the nav pipeline.
+
+  - id: pose-extractor
+    path: nodes/pose_extractor_node.py
+    inputs:
+      joint_positions: mujoco-sim/joint_positions
+    outputs:
+      - ground_truth_pose
+
+  # =======================================
+  # Navigation Pipeline (Python — replaces C++ dora-nav)
+  # =======================================
+
+  - id: pub-road
+    path: nodes/pub_road_node.py
+    inputs:
+      tick: dora/timer/millis/200
+    outputs:
+      - road_lane
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+
+  - id: road-lane-publisher
+    path: nodes/road_lane_publisher_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose: pose-extractor/ground_truth_pose
+    outputs:
+      - cur_pose_all
+
+  - id: task-pub-stub
+    path: nodes/task_pub_stub.py
+    inputs:
+      tick: dora/timer/millis/100
+    outputs:
+      - road_attri_msg
+
+  - id: planning
+    path: nodes/planning_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose_all: road-lane-publisher/cur_pose_all
+      road_attri_msg: task-pub-stub/road_attri_msg
+    outputs:
+      - raw_path
+      - Request
+
+  - id: lon-control
+    path: nodes/lon_controller_node.py
+    inputs:
+      Request: planning/Request
+    outputs:
+      - TrqBreCmd
+
+  - id: lat-control
+    path: nodes/lat_controller_node.py
+    inputs:
+      raw_path: planning/raw_path
+    outputs:
+      - SteeringCmd
+
+  # =======================================
+  # Rerun 3D Visualization
+  # =======================================
+
+  - id: rerun
+    path: nodes/rerun_viz_node.py
+    inputs:
+      raw_path: planning/raw_path
+      cur_pose: pose-extractor/ground_truth_pose
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+      MAP_PCD_FILE: ""
+
+  # =======================================
+  # Navigation Bridge (dora-nav → wheels)
+  # =======================================
+
+  - id: nav-bridge
+    path: nodes/nav_bridge_node.py
+    inputs:
+      ground_truth_pose: pose-extractor/ground_truth_pose
+      SteeringCmd: lat-control/SteeringCmd
+      TrqBreCmd: lon-control/TrqBreCmd
+    outputs:
+      - skill_result
+      - wheel_commands

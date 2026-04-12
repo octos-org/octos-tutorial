@@ -1,0 +1,114 @@
+# dataflow_octos_cyclic.yaml — Octos cyclic patrol (2 loops)
+#
+# Robot patrols A → B → home in a continuous loop, repeating 2 times.
+# Uses CyclicPipelineExecutor with max_cycles=2 from cyclic_patrol.dot.
+# No LLM required — deterministic pipeline execution.
+#
+# Run:
+#   dora up && dora start dataflow_octos_cyclic.yaml --attach
+
+nodes:
+  - id: mujoco-sim
+    path: dora-mujoco/dora_mujoco/main.py
+    inputs:
+      tick: dora/timer/millis/10
+      wheel_control: nav-bridge/wheel_commands
+    outputs:
+      - joint_positions
+    env:
+      MODEL_NAME: models/hunter_se_warehouse.xml
+      MUJOCO_GL: cgl
+      NAV_MODE: "1"
+      PHYSICS_STEPS: "5"
+
+  - id: pose-extractor
+    path: nodes/pose_extractor_node.py
+    inputs:
+      joint_positions: mujoco-sim/joint_positions
+    outputs:
+      - ground_truth_pose
+
+  - id: pub-road
+    path: nodes/pub_road_node.py
+    inputs:
+      tick: dora/timer/millis/200
+    outputs:
+      - road_lane
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+
+  - id: road-lane-publisher
+    path: nodes/road_lane_publisher_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose: pose-extractor/ground_truth_pose
+    outputs:
+      - cur_pose_all
+
+  - id: task-pub-stub
+    path: nodes/task_pub_stub.py
+    inputs:
+      tick: dora/timer/millis/100
+    outputs:
+      - road_attri_msg
+
+  - id: planning
+    path: nodes/planning_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose_all: road-lane-publisher/cur_pose_all
+      road_attri_msg: task-pub-stub/road_attri_msg
+    outputs:
+      - raw_path
+      - Request
+
+  - id: lon-control
+    path: nodes/lon_controller_node.py
+    inputs:
+      Request: planning/Request
+    outputs:
+      - TrqBreCmd
+
+  - id: lat-control
+    path: nodes/lat_controller_node.py
+    inputs:
+      raw_path: planning/raw_path
+    outputs:
+      - SteeringCmd
+
+  - id: rerun
+    path: nodes/rerun_viz_node.py
+    inputs:
+      raw_path: planning/raw_path
+      cur_pose: pose-extractor/ground_truth_pose
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+      MAP_PCD_FILE: ""
+
+  - id: nav-bridge
+    path: nodes/nav_bridge_node.py
+    inputs:
+      skill_request: robot-edge-a/skill_request
+      ground_truth_pose: pose-extractor/ground_truth_pose
+      SteeringCmd: lat-control/SteeringCmd
+      TrqBreCmd: lon-control/TrqBreCmd
+    outputs:
+      - skill_result
+      - wheel_commands
+
+  - id: robot-edge-a
+    path: nodes/octos_robot_edge_node.py
+    inputs:
+      skill_result: nav-bridge/skill_result
+    outputs:
+      - agent_registration
+      - result
+      - agent_status
+      - environment_update
+      - skill_request
+    env:
+      ROBOT_NAME: demo_robot
+      OCTOS_PROVIDER: "mock"
+      OCTOS_SKILLS_DIR: "skills/robot/"
+      OCTOS_PIPELINE: "cyclic_patrol.dot"
+      USER_COMMAND: "Execute cyclic patrol: navigate stations A, B, home — repeat 2 times"

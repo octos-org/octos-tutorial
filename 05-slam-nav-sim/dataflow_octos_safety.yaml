@@ -1,0 +1,150 @@
+# dataflow_octos_safety.yaml — Octos safety tier authorization demo
+#
+# Demonstrates safety tier gating: nav-bridge starts with OBSERVE tier,
+# blocking navigate_to and stop_base (which require SAFE_MOTION).
+# The LLM agent discovers it can only read sensors, not move the robot.
+#
+# Tools by tier:
+#   observe:      get_robot_state, get_map, read_lidar (ALLOWED)
+#   safe_motion:  navigate_to, stop_base              (DENIED)
+#
+# Run:
+#   dora up && dora start dataflow_octos_safety.yaml --attach
+
+nodes:
+  # =======================================
+  # MuJoCo Simulation
+  # =======================================
+
+  - id: mujoco-sim
+    path: dora-mujoco/dora_mujoco/main.py
+    inputs:
+      tick: dora/timer/millis/10
+      wheel_control: nav-bridge/wheel_commands
+    outputs:
+      - joint_positions
+    env:
+      MODEL_NAME: models/hunter_se_warehouse.xml
+      MUJOCO_GL: cgl
+      NAV_MODE: "1"
+      PHYSICS_STEPS: "5"
+
+  # =======================================
+  # Pose Extractor
+  # =======================================
+
+  - id: pose-extractor
+    path: nodes/pose_extractor_node.py
+    inputs:
+      joint_positions: mujoco-sim/joint_positions
+    outputs:
+      - ground_truth_pose
+
+  # =======================================
+  # Navigation Pipeline (Python)
+  # =======================================
+
+  - id: pub-road
+    path: nodes/pub_road_node.py
+    inputs:
+      tick: dora/timer/millis/200
+    outputs:
+      - road_lane
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+
+  - id: road-lane-publisher
+    path: nodes/road_lane_publisher_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose: pose-extractor/ground_truth_pose
+    outputs:
+      - cur_pose_all
+
+  - id: task-pub-stub
+    path: nodes/task_pub_stub.py
+    inputs:
+      tick: dora/timer/millis/100
+    outputs:
+      - road_attri_msg
+
+  - id: planning
+    path: nodes/planning_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose_all: road-lane-publisher/cur_pose_all
+      road_attri_msg: task-pub-stub/road_attri_msg
+    outputs:
+      - raw_path
+      - Request
+
+  - id: lon-control
+    path: nodes/lon_controller_node.py
+    inputs:
+      Request: planning/Request
+    outputs:
+      - TrqBreCmd
+
+  - id: lat-control
+    path: nodes/lat_controller_node.py
+    inputs:
+      raw_path: planning/raw_path
+    outputs:
+      - SteeringCmd
+
+  # =======================================
+  # Rerun 3D Visualization
+  # =======================================
+
+  - id: rerun
+    path: nodes/rerun_viz_node.py
+    inputs:
+      raw_path: planning/raw_path
+      cur_pose: pose-extractor/ground_truth_pose
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+      MAP_PCD_FILE: ""
+
+  # =======================================
+  # Navigation Bridge (OBSERVE tier — motion blocked)
+  # =======================================
+
+  - id: nav-bridge
+    path: nodes/nav_bridge_node.py
+    inputs:
+      skill_request: robot-edge-a/skill_request
+      ground_truth_pose: pose-extractor/ground_truth_pose
+      SteeringCmd: lat-control/SteeringCmd
+      TrqBreCmd: lon-control/TrqBreCmd
+    outputs:
+      - skill_result
+      - wheel_commands
+    env:
+      SAFETY_TIER: "observe"
+
+  # =======================================
+  # Octos LLM Agent
+  # =======================================
+
+  - id: robot-edge-a
+    path: nodes/octos_robot_edge_node.py
+    inputs:
+      skill_result: nav-bridge/skill_result
+    outputs:
+      - agent_registration
+      - result
+      - agent_status
+      - environment_update
+      - skill_request
+    env:
+      ROBOT_NAME: demo_robot
+      OPENAI_API_BASE: "http://localhost:11434/v1"
+      OPENAI_API_KEY: "none"
+      OPENAI_MODEL: "qwen3:30b"
+      OCTOS_PROVIDER: "openai"
+      OCTOS_SKILLS_DIR: "skills/robot/"
+      USER_COMMAND: >-
+        You are a warehouse patrol robot. Navigate to station A, then B, then home.
+        Use get_robot_state first to check your position, then navigate_to for each station.
+        If any tool is denied due to safety permissions, report which tools are blocked
+        and what tier is needed. List what you CAN do vs what you CANNOT do.
