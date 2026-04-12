@@ -1,0 +1,45 @@
+# 03-llm-agent — LLM-driven robot agent with obstacle replanning
+#
+# The LLM agent reasons about tool results and adapts when things go wrong.
+# An obstacle at y=8.0 blocks the path to station A — the agent must detect
+# the failure and replan (skip A, try B, etc).
+#
+# Requires Ollama (or any OpenAI-compatible endpoint).
+#
+# Run:
+#   cd 03-llm-agent
+#   dora up && dora start dataflow.yaml --attach
+#
+# With custom LLM:
+#   OPENAI_API_BASE=https://api.openai.com/v1 OPENAI_API_KEY=sk-... OPENAI_MODEL=gpt-4o-mini \
+#   dora up && dora start dataflow.yaml --attach
+
+nodes:
+  - id: mock-robot
+    path: nodes/mock_robot_node.py
+    inputs:
+      skill_request: agent/skill_request
+    outputs:
+      - skill_result
+    env:
+      OBSTACLE_Y: "8.0"
+
+  - id: agent
+    path: nodes/agent_node.py
+    inputs:
+      skill_result: mock-robot/skill_result
+    outputs:
+      - skill_request
+    env:
+      OPENAI_API_BASE: "http://localhost:11434/v1"
+      OPENAI_API_KEY: "none"
+      OPENAI_MODEL: "qwen3:8b"
+      USER_COMMAND: >-
+        You are a warehouse patrol robot. Your mission:
+        1. Check your current state with get_robot_state
+        2. Navigate to station A
+        3. Navigate to station B
+        4. Return home
+        If any navigation fails due to an obstacle, report the failure,
+        skip that station, and continue to the next one.
+        After completing (or skipping) all stations, give a final summary.
