@@ -2,6 +2,30 @@
 
 The simplest octos example: a 2-node dataflow where an agent executes a DOT pipeline to patrol stations.
 
+## Background
+
+### The Problem
+
+A warehouse runs 3 patrol shifts daily. Each shift, an operator manually drives the robot through stations A→B→home, typing navigation commands into a terminal. Different operators sequence the stations differently. When a robot stalls mid-patrol, nobody knows which stations were completed — the operator has to start over or guess.
+
+### Why This Matters
+
+In production, **robots need repeatable missions, not ad hoc commands**. A gas pipeline inspection that skips station 3 because an operator forgot is a compliance violation. A factory patrol that visits stations in random order makes anomaly tracking impossible. You need a mission definition that is:
+
+- **Auditable** — anyone can read the DOT file and know exactly what the robot will do
+- **Resumable** — checkpoints record progress, so a restart picks up where it left off
+- **Deterministic** — same pipeline, same execution, every time
+
+### Before vs After
+
+| | Before (ad hoc scripts) | After (DOT pipeline) |
+|---|---|---|
+| Mission definition | Scattered across Python scripts, bash aliases, operator notes | Single `patrol.dot` file — 15 lines, version-controlled |
+| Execution order | Depends on who's operating | Guaranteed: check→A→B→home, every run |
+| Failure recovery | "Where did it stop? Let me SSH in and check..." | Checkpoints: `at_A`, `at_B`, `at_home` — resume from last |
+| Onboarding | New operator needs training on the script | New operator reads the DOT graph in 30 seconds |
+| Testing | Run the whole thing and watch | Pipeline engine validates graph at load time |
+
 ## What You'll Learn
 
 - How octos DOT pipelines define tool execution sequences

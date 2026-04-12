@@ -2,6 +2,28 @@
 
 An octos agent powered by a real LLM that reasons about tool results and replans when navigation fails.
 
+## Background
+
+### The Problem
+
+Your patrol pipeline (`01-pipeline-basics`) works perfectly — until a forklift parks in aisle 3. The robot tries `navigate_to(B)`, gets "path blocked," and the pipeline aborts. An operator has to SSH in, figure out what happened, manually skip station B, and restart. This happens 2-3 times per week. Each incident costs 20 minutes of downtime and an operator's attention.
+
+### Why This Matters
+
+Real warehouses are messy. Pallets move, doors close, forklifts block aisles, spills happen. A pipeline that aborts on the first unexpected event is brittle. But you also can't pre-script every possible failure mode — there are too many combinations.
+
+An LLM agent closes this gap: it **reads the failure message, understands the context, and decides what to do** — just like a human operator would. "Station A is blocked? Skip it, try B. B is also blocked? Return home and report." The agent doesn't need a rule for every scenario; it reasons about the situation.
+
+### Before vs After
+
+| | Before (fixed pipeline) | After (LLM agent) |
+|---|---|---|
+| Forklift blocks aisle 3 | Pipeline aborts. Operator intervenes. 20min downtime. | Agent skips blocked station, continues patrol, reports. 0 downtime. |
+| Unknown obstacle type | `navigate_to` returns error. Pipeline doesn't know what to do. | Agent reads error message, decides based on severity. |
+| Operator workload | 2-3 manual interventions per week per robot | Agent handles routine failures autonomously |
+| Failure transparency | Log says "navigation failed." Why? Unknown. | Agent explains: "Obstacle at y=8.0, skipped station A, completed B and home." |
+| Scaling to 10 robots | 10x operator interventions | Each robot handles its own failures. Operator reviews summaries. |
+
 ## What You'll Learn
 
 - OpenAI-compatible LLM provider (works with Ollama, vLLM, OpenAI API)

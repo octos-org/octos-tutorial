@@ -2,6 +2,32 @@
 
 Visual MuJoCo simulation where a Hunter SE robot navigates a warehouse. 5 dataflows demonstrate progressive octos integration.
 
+## Background
+
+### The Problem
+
+You're building a warehouse patrol robot. Your pipeline works in the mock examples (01-04), but you need to answer harder questions: Does the path planner actually avoid obstacles? Does the Pure Pursuit controller track the path within 0.5m? Does the robot arrive at station A before the 120s deadline? You can't answer these with a mock that just returns "Arrived at A" after 0.5 seconds.
+
+### Why This Matters
+
+Mock robots test your **agent logic**. Simulation tests your **whole stack**: physics, control, planning, perception, and agent logic together. The gap matters:
+
+- A mock `navigate_to` always succeeds. In simulation, the robot can overshoot, oscillate, or stall — exactly like real hardware.
+- A mock returns instantly. Simulation reveals timing: does the planner keep up at 100ms? Does the LLM respond before the robot reaches the obstacle?
+- A mock has no spatial awareness. Simulation shows: is the robot actually at y=10.0 when it claims to be at station A?
+
+This example runs the same 5 octos patterns (pipeline, replan, safety, cyclic) but with a real physics loop — MuJoCo at 100Hz, Frenet planning at 10Hz, Pure Pursuit control at 100Hz, Rerun visualization at 10Hz.
+
+### Before vs After
+
+| | Before (mock robot) | After (MuJoCo simulation) |
+|---|---|---|
+| "Does the path planner work?" | "It returned a result" | Watch the blue path in Rerun — see it curve around waypoints |
+| "Does the robot reach station A?" | "The mock said yes" | Check: robot position is (-0.45, 10.02) — within 0.5m threshold |
+| "How long does a full patrol take?" | ~2 seconds (mock sleeps) | ~90 seconds with real physics, real control, real timing |
+| "What happens when the planner is slow?" | Nothing — mock is instant | Robot overshoots the turn because the path update was late |
+| "Can I show this to stakeholders?" | Terminal text output | Rerun 3D: robot moving through warehouse, LiDAR pointcloud, path overlay |
+
 ## What You'll Learn
 
 - Full dora-nav pipeline ported to Python (5 C++ nodes → Python)

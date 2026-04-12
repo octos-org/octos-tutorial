@@ -2,6 +2,33 @@
 
 Demonstrates octos safety tier authorization — tools are gated by permission level.
 
+## Background
+
+### The Problem
+
+Your warehouse has three roles: **monitoring staff** who watch dashboards, **navigation operators** who drive robots, and **maintenance engineers** who control the arm. Last month, a monitoring intern accidentally sent a `navigate_to` command during a shift change — the robot drove into a pallet stack. The root cause: every session had full tool access regardless of the operator's role.
+
+### Why This Matters
+
+Industrial robots are not laptops — **wrong tool at the wrong time causes physical damage**. An LLM agent with unrestricted tool access is even riskier: it might call `navigate_to` during an arm inspection, or trigger `emergency_stop` when the arm is holding a fragile part mid-air. Safety tiers solve this:
+
+- **Observe** — monitoring staff can read sensors, check state, view maps. Cannot move anything.
+- **Safe motion** — operators can navigate the base. Cannot control the arm.
+- **Full actuation** — engineers can move the arm, scan stations. Requires explicit escalation.
+- **Emergency override** — supervisors only. Bypasses all restrictions.
+
+The key insight: **the agent doesn't decide its own permissions**. The deployment configuration (env var, config file, or auth token) sets the tier. The agent discovers its limits at runtime and works within them.
+
+### Before vs After
+
+| | Before (no tiers) | After (safety tiers) |
+|---|---|---|
+| Intern on monitoring shift | Can send `navigate_to` — robot moves unexpectedly | Gets `PERMISSION DENIED` — robot stays put |
+| LLM agent hallucinating | Calls any tool it wants, including dangerous ones | Blocked at the policy layer before execution |
+| Compliance audit | "Who could have moved the robot?" — "Anyone." | Tier config + logs prove which session had which access |
+| New deployment | Ship and pray | Start at `observe`, promote to `safe_motion` after validation |
+| Incident response | Scramble to figure out who did what | Tier boundaries create clear responsibility zones |
+
 ## What You'll Learn
 
 - Safety tier ordering: `observe < safe_motion < full_actuation < emergency_override`
