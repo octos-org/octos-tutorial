@@ -1,0 +1,75 @@
+// inspection_gated.dot — Patrol with operator approval gates
+//
+// Before each navigation, a gate node pauses for operator confirmation.
+// Gates are checked by the agent — if GATE_POLICY env var rejects a station,
+// the pipeline skips it.
+
+digraph inspection_gated {
+    label = "Gated Inspection Patrol";
+
+    check [
+        label="check_state"
+        tool="get_robot_state"
+    ];
+
+    gate_a [
+        label="Approve navigation to Station A?"
+        type="gate"
+    ];
+
+    nav_a [
+        label="navigate_to_A"
+        tool="navigate_to"
+        args='{"waypoint": "A"}'
+        checkpoint="at_A"
+    ];
+
+    scan_a [
+        label="read_lidar_A"
+        tool="read_lidar"
+    ];
+
+    gate_b [
+        label="Approve navigation to Station B?"
+        type="gate"
+    ];
+
+    nav_b [
+        label="navigate_to_B"
+        tool="navigate_to"
+        args='{"waypoint": "B"}'
+        checkpoint="at_B"
+    ];
+
+    scan_b [
+        label="read_lidar_B"
+        tool="read_lidar"
+    ];
+
+    gate_home [
+        label="Approve return to home?"
+        type="gate"
+    ];
+
+    nav_home [
+        label="navigate_home"
+        tool="navigate_to"
+        args='{"waypoint": "home"}'
+        checkpoint="at_home"
+    ];
+
+    report [
+        label="final_report"
+        tool="get_robot_state"
+    ];
+
+    check -> gate_a;
+    gate_a -> nav_a;
+    nav_a -> scan_a;
+    scan_a -> gate_b;
+    gate_b -> nav_b;
+    nav_b -> scan_b;
+    scan_b -> gate_home;
+    gate_home -> nav_home;
+    nav_home -> report;
+}
