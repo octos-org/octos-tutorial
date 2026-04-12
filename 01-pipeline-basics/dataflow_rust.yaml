@@ -1,0 +1,26 @@
+# dataflow_rust.yaml — Same as dataflow.yaml but uses octos-dora-agent (Rust)
+#
+# Replaces the Python agent_node.py with the compiled Rust binary.
+# Requires: cargo install --path crates/octos-dora-mcp (from the octos repo)
+#
+# Run:
+#   dora up && dora start dataflow_rust.yaml --attach
+
+nodes:
+  - id: mock-robot
+    path: nodes/mock_robot_node.py
+    inputs:
+      skill_request: agent/skill_request
+    outputs:
+      - skill_result
+
+  - id: agent
+    custom:
+      source: Local
+      path: octos-dora-agent
+      inputs:
+        skill_result: mock-robot/skill_result
+      outputs:
+        - skill_request
+    env:
+      OCTOS_PIPELINE: "patrol.dot"

@@ -1,0 +1,28 @@
+# dataflow_rust.yaml — Safety tiers with octos-dora-agent (Rust)
+#
+# Requires: cargo install --path crates/octos-dora-mcp (from the octos repo)
+#
+# Run:
+#   dora up && dora start dataflow_rust.yaml --attach
+
+nodes:
+  - id: safe-robot
+    path: nodes/safe_robot_node.py
+    inputs:
+      skill_request: agent/skill_request
+    outputs:
+      - skill_result
+    env:
+      SAFETY_TIER: "observe"
+
+  - id: agent
+    custom:
+      source: Local
+      path: octos-dora-agent
+      inputs:
+        skill_result: safe-robot/skill_result
+      outputs:
+        - skill_request
+    env:
+      OCTOS_PIPELINE: "test_all_tools.dot"
+      SAFETY_TIER: "observe"
