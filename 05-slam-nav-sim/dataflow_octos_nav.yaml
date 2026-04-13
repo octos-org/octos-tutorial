@@ -29,7 +29,7 @@ nodes:
       - joint_positions
     env:
       MODEL_NAME: models/hunter_se_warehouse.xml
-      MUJOCO_GL: cgl
+      MUJOCO_GL: glfw
       NAV_MODE: "1"
       PHYSICS_STEPS: "5"
 
