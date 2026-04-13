@@ -107,7 +107,7 @@ nodes:
       cur_pose: pose-extractor/ground_truth_pose
     env:
       WAYPOINTS_FILE: "Waypoints.txt"
-      MAP_PCD_FILE: ""
+      MAP_PCD_FILE: "table_scene_lms400.pcd"
 
   # =======================================
   # Navigation Bridge (dora-nav → wheels)
