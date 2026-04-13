@@ -135,11 +135,14 @@ def main():
 
         elif eid == "cur_pose":
             if _maps_x is None:
+                print(f"[road-lane-pub] cur_pose received but no road_lane yet")
                 continue
             if len(raw) < 12:
+                print(f"[road-lane-pub] cur_pose too short: {len(raw)} bytes")
                 continue
 
             x, y, theta_deg = struct.unpack('<fff', raw[:12])
+            print(f"[road-lane-pub] cur_pose: x={x:.3f} y={y:.3f} θ={theta_deg:.1f}°")
             theta_rad = theta_deg * math.pi / 180.0
 
             s, d = get_frenet(x, y, _maps_x, _maps_y, _maps_s)
