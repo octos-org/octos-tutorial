@@ -1,11 +1,8 @@
 # dataflow_nav_sim_py.yaml — All-Python SLAM navigation simulation
 #
-# Same 9-node topology as dataflow_nav_sim.yaml but with all dora-nav
-# C++ nodes replaced by Python equivalents. Runs on macOS and Linux
-# without requiring dora-nav C++ builds.
-#
-# Adds pose-extractor node to bridge local dora-mujoco (which only outputs
-# joint_positions) to the nav pipeline (which needs ground_truth_pose).
+# 9-node dataflow. MuJoCo (epyc version) outputs ground_truth_pose +
+# pointcloud directly via LiDAR raycasting. On macOS, viewer falls back
+# to headless mode.
 #
 # Prerequisites:
 #   pip install dora-rs mujoco rerun-sdk pyarrow numpy
@@ -25,27 +22,23 @@ nodes:
       wheel_control: nav-bridge/wheel_commands
     outputs:
       - joint_positions
+      - ground_truth_pose
+      - pointcloud
     env:
       MODEL_NAME: models/hunter_se_warehouse.xml
       MUJOCO_GL: cgl
       NAV_MODE: "1"
       PHYSICS_STEPS: "5"
+      LIDAR_RAYS: "360"
+      LIDAR_VERTICAL_BEAMS: "16"
+      LIDAR_RANGE: "100.0"
+      LIDAR_MIN_RANGE: "0.5"
+      LIDAR_BODY_NAME: "lidar"
+      ROBOT_BODY_NAME: "hunter_base"
+      POINTCLOUD_RATE: "10"
 
   # =======================================
-  # Pose Extractor (qpos → Pose2D_h)
-  # =======================================
-  # Local dora-mujoco only outputs joint_positions.
-  # This node extracts (x, y, theta) as Pose2D_h for the nav pipeline.
-
-  - id: pose-extractor
-    path: nodes/pose_extractor_node.py
-    inputs:
-      joint_positions: mujoco-sim/joint_positions
-    outputs:
-      - ground_truth_pose
-
-  # =======================================
-  # Navigation Pipeline (Python — replaces C++ dora-nav)
+  # Navigation Pipeline (Python)
   # =======================================
 
   - id: pub-road
@@ -61,7 +54,7 @@ nodes:
     path: nodes/road_lane_publisher_node.py
     inputs:
       road_lane: pub-road/road_lane
-      cur_pose: pose-extractor/ground_truth_pose
+      cur_pose: mujoco-sim/ground_truth_pose
     outputs:
       - cur_pose_all
 
@@ -103,20 +96,21 @@ nodes:
   - id: rerun
     path: nodes/rerun_viz_node.py
     inputs:
+      pointcloud: mujoco-sim/pointcloud
       raw_path: planning/raw_path
-      cur_pose: pose-extractor/ground_truth_pose
+      cur_pose: mujoco-sim/ground_truth_pose
     env:
       WAYPOINTS_FILE: "Waypoints.txt"
       MAP_PCD_FILE: "table_scene_lms400.pcd"
 
   # =======================================
-  # Navigation Bridge (dora-nav → wheels)
+  # Navigation Bridge
   # =======================================
 
   - id: nav-bridge
     path: nodes/nav_bridge_node.py
     inputs:
-      ground_truth_pose: pose-extractor/ground_truth_pose
+      ground_truth_pose: mujoco-sim/ground_truth_pose
       SteeringCmd: lat-control/SteeringCmd
       TrqBreCmd: lon-control/TrqBreCmd
     outputs:

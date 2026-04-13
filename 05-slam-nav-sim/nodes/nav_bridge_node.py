@@ -148,9 +148,9 @@ class NavBridge:
     def _send_wheel(self, steer_l, steer_r, speed_l, speed_r):
         steer_l = max(-MAX_STEER_RAD, min(MAX_STEER_RAD, steer_l))
         steer_r = max(-MAX_STEER_RAD, min(MAX_STEER_RAD, steer_r))
-        # Order: [speed_l, speed_r, steer_l, steer_r]
-        # Local dora-mujoco reads [0],[1] as rear wheel speeds at ctrl[9],ctrl[10]
-        cmd = np.array([speed_l, speed_r, steer_l, steer_r], dtype=np.float32)
+        # Order: [steer_l, steer_r, speed_l, speed_r]
+        # Matches dora-mujoco: ctrl[7]=steer_l, ctrl[8]=steer_r, ctrl[9]=speed_l, ctrl[10]=speed_r
+        cmd = np.array([steer_l, steer_r, speed_l, speed_r], dtype=np.float32)
         self.node.send_output("wheel_commands", pa.array(cmd))
 
     def forward_nav_to_wheels(self):
