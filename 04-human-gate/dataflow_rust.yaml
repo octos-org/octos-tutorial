@@ -1,0 +1,28 @@
+# dataflow_rust.yaml — Human gate with octos-dora-agent (Rust)
+#
+# Note: gates are auto-approved in the Rust binary. For policy-based
+# gate approval, use the Python agent_node.py (dataflow.yaml).
+#
+# Requires: cargo install --path crates/octos-dora-mcp (from the octos repo)
+#
+# Run:
+#   dora up && dora start dataflow_rust.yaml --attach
+
+nodes:
+  - id: mock-robot
+    path: nodes/mock_robot_node.py
+    inputs:
+      skill_request: agent/skill_request
+    outputs:
+      - skill_result
+
+  - id: agent
+    custom:
+      source: Local
+      path: octos-dora-agent
+      inputs:
+        skill_result: mock-robot/skill_result
+      outputs:
+        - skill_request
+    env:
+      OCTOS_PIPELINE: "inspection_gated.dot"

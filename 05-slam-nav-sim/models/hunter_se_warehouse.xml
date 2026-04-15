@@ -1,0 +1,249 @@
+<mujoco model="hunter_se_gen72_warehouse_nav">
+  <compiler angle="radian" meshdir="."/>
+
+  <option gravity="0 0 -9.81" timestep="0.001"/>
+
+  <visual>
+    <headlight ambient="0.5 0.5 0.5" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3"/>
+    <scale framewidth="0.01" framelength="0.3"/>
+  </visual>
+
+  <asset>
+    <!-- Floor texture (warehouse checker) -->
+    <texture name="floor_tex" type="2d" builtin="checker" width="512" height="512"
+             rgb1="0.9 0.9 0.9" rgb2="0.8 0.8 0.8"/>
+    <material name="floor_mat" texture="floor_tex" texrepeat="20 20"/>
+    <material name="wall_mat" rgba="0.7 0.7 0.7 1"/>
+    <material name="shelf_mat" rgba="0.4 0.3 0.2 1"/>
+    <material name="box_mat" rgba="0.6 0.4 0.2 1"/>
+    <material name="table_mat" rgba="0.6 0.5 0.3 1"/>
+    <material name="valve_mat" rgba="0.4 0.4 0.45 1"/>
+    <material name="handwheel_mat" rgba="0.85 0.2 0.15 1"/>
+    <material name="lidar_mat" rgba="0.2 0.2 0.8 1"/>
+
+    <!-- Hunter SE meshes -->
+    <mesh name="hunter_base" file="hunter_se/hunter_se_description/meshes/base_link.STL"/>
+    <mesh name="hunter_fr_left" file="hunter_se/hunter_se_description/meshes/fr_left_link.STL"/>
+    <mesh name="hunter_fr_right" file="hunter_se/hunter_se_description/meshes/fr_right_link.STL"/>
+    <mesh name="hunter_re_left" file="hunter_se/hunter_se_description/meshes/re_left_link.STL"/>
+    <mesh name="hunter_re_right" file="hunter_se/hunter_se_description/meshes/re_right_link.STL"/>
+
+    <!-- GEN72 arm meshes -->
+    <mesh name="base_link" file="GEN72/urdf/gen_72_b_description/meshes/base_link.STL"/>
+    <mesh name="Link1" file="GEN72/urdf/gen_72_b_description/meshes/Link1.STL"/>
+    <mesh name="Link2" file="GEN72/urdf/gen_72_b_description/meshes/Link2.STL"/>
+    <mesh name="Link3" file="GEN72/urdf/gen_72_b_description/meshes/Link3.STL"/>
+    <mesh name="Link4" file="GEN72/urdf/gen_72_b_description/meshes/Link4.STL"/>
+    <mesh name="Link5" file="GEN72/urdf/gen_72_b_description/meshes/Link5.STL"/>
+    <mesh name="Link6" file="GEN72/urdf/gen_72_b_description/meshes/Link6.STL"/>
+    <mesh name="Link7" file="GEN72/urdf/gen_72_b_description/meshes/Link7.STL"/>
+  </asset>
+
+  <worldbody>
+    <!-- Warehouse lighting -->
+    <light pos="0 10 5" dir="0 0 -1" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3"/>
+    <light pos="-5 25 5" dir="0 0 -1" diffuse="0.6 0.6 0.6"/>
+    <light pos="-10 35 5" dir="0 0 -1" diffuse="0.5 0.5 0.5"/>
+
+    <!-- Floor (50x50m warehouse) -->
+    <geom name="floor" type="plane" size="50 50 0.1" material="floor_mat"/>
+
+    <!-- ============================================================ -->
+    <!-- Station A at y=10 — table well clear of path (+X side)       -->
+    <!-- Path runs at x≈0, table at x=1.5 (>1m clearance)            -->
+    <!-- ============================================================ -->
+    <body name="table_A" pos="2.5 10.0 0.2">
+      <geom type="box" size="0.28 0.35 0.02" material="table_mat"/>
+      <geom type="cylinder" size="0.02 0.1" pos="-0.23 -0.30 -0.12" material="table_mat"/>
+      <geom type="cylinder" size="0.02 0.1" pos=" 0.23 -0.30 -0.12" material="table_mat"/>
+      <geom type="cylinder" size="0.02 0.1" pos="-0.23  0.30 -0.12" material="table_mat"/>
+      <geom type="cylinder" size="0.02 0.1" pos=" 0.23  0.30 -0.12" material="table_mat"/>
+    </body>
+
+    <!-- Cubes at Station A (static) -->
+    <body name="A_red_block" pos="2.60 9.95 0.245">
+      <geom type="box" size="0.025 0.025 0.025" rgba="0.9 0.15 0.15 1"/>
+    </body>
+    <body name="A_green_block" pos="2.42 10.00 0.245">
+      <geom type="box" size="0.025 0.025 0.025" rgba="0.15 0.8 0.2 1"/>
+    </body>
+    <body name="A_blue_block" pos="2.60 9.90 0.245">
+      <geom type="box" size="0.025 0.025 0.025" rgba="0.15 0.25 0.9 1"/>
+    </body>
+
+    <!-- ============================================================ -->
+    <!-- Station B at y=18 — table well clear of path (+X side)       -->
+    <!-- Path runs at x≈0, table at x=1.5 (>1m clearance)            -->
+    <!-- ============================================================ -->
+    <body name="table_B" pos="2.5 18.0 0.2">
+      <geom type="box" size="0.28 0.35 0.02" material="table_mat"/>
+      <geom type="cylinder" size="0.02 0.1" pos="-0.23 -0.30 -0.12" material="table_mat"/>
+      <geom type="cylinder" size="0.02 0.1" pos=" 0.23 -0.30 -0.12" material="table_mat"/>
+      <geom type="cylinder" size="0.02 0.1" pos="-0.23  0.30 -0.12" material="table_mat"/>
+      <geom type="cylinder" size="0.02 0.1" pos=" 0.23  0.30 -0.12" material="table_mat"/>
+    </body>
+
+    <!-- Cubes at Station B (static) -->
+    <body name="B_yellow_block" pos="2.60 17.95 0.245">
+      <geom type="box" size="0.025 0.025 0.025" rgba="0.95 0.85 0.1 1"/>
+    </body>
+    <body name="B_purple_block" pos="2.42 18.00 0.245">
+      <geom type="box" size="0.025 0.025 0.025" rgba="0.6 0.2 0.8 1"/>
+    </body>
+    <body name="B_blue_block" pos="2.60 17.90 0.245">
+      <geom type="box" size="0.025 0.025 0.025" rgba="0.15 0.25 0.9 1"/>
+    </body>
+
+    <!-- ============================================================ -->
+    <!-- Hunter SE Mobile Base + GEN72 Arm + LiDAR                    -->
+    <!-- Starts at waypoint 0: (-0.21, 0.28) heading 128° (2.234 rad)-->
+    <!-- Quaternion: qw=cos(1.117)=0.4384, qz=sin(1.117)=0.8988     -->
+    <!-- ============================================================ -->
+    <body name="hunter_base" pos="-0.21 0.28 0.28">
+      <freejoint name="hunter_floating"/>
+      <inertial pos="0.037 0 -0.077" mass="24.73" diaginertia="0.313606 0.219145 0.123216"/>
+      <geom type="mesh" rgba="0.75 0.75 0.75 1" mesh="hunter_base"/>
+
+      <!-- Front Left Wheel -->
+      <body name="fr_steer_left" pos="0.34058 0.24619 -0.1535">
+        <inertial pos="0 0.0164 0" mass="3.149" diaginertia="0.0378075 0.0222 0.0222"/>
+        <joint name="fr_steer_left_joint" type="hinge" axis="0 0 1" range="-0.69 0.69" damping="10"/>
+        <body name="fr_left" quat="0.707107 0.707107 0 0">
+          <joint name="fr_left_joint" type="hinge" axis="0 0 -1" damping="10" frictionloss="1"/>
+          <inertial pos="0 0 -0.0164" mass="3.149" diaginertia="0.0378075 0.0222 0.0222"/>
+          <geom type="mesh" rgba="0.22 0.22 0.22 1" mesh="hunter_fr_left" contype="0" conaffinity="0"/>
+          <geom name="fr_left_contact" type="cylinder" size="0.122 0.06" condim="6"
+                friction="2.0 0.01 0.001" rgba="0 0 0 0"/>
+        </body>
+      </body>
+
+      <!-- Front Right Wheel -->
+      <body name="fr_steer_right" pos="0.34219 -0.24619 -0.1535">
+        <inertial pos="0 -0.0164 0" mass="3.149" diaginertia="0.0378075 0.0222 0.0222"/>
+        <joint name="fr_steer_right_joint" type="hinge" axis="0 0 1" range="-0.69 0.69" damping="10"/>
+        <body name="fr_right" quat="0.707107 -0.707107 0 0">
+          <joint name="fr_right_joint" type="hinge" axis="0 0 1" damping="10" frictionloss="1"/>
+          <inertial pos="0 0 -0.0164" mass="3.149" diaginertia="0.0378075 0.0222 0.0222"/>
+          <geom type="mesh" rgba="0.22 0.22 0.22 1" mesh="hunter_fr_right" contype="0" conaffinity="0"/>
+          <geom name="fr_right_contact" type="cylinder" size="0.122 0.06" condim="6"
+                friction="2.0 0.01 0.001" rgba="0 0 0 0"/>
+        </body>
+      </body>
+
+      <!-- Rear Left Wheel -->
+      <body name="re_left" pos="-0.2078 0.252 -0.158" quat="0.707107 0.707107 0 0">
+        <joint name="re_left_joint" type="hinge" axis="0 0 -1" damping="10" frictionloss="1"/>
+        <inertial pos="0 0 -0.0103" mass="3.149" diaginertia="0.0378075 0.0222 0.0222"/>
+        <geom type="mesh" rgba="0.376 0.376 0.376 1" mesh="hunter_re_left" contype="0" conaffinity="0"/>
+        <geom name="re_left_contact" type="cylinder" size="0.122 0.06" condim="6"
+              friction="2.0 0.01 0.001" rgba="0 0 0 0"/>
+      </body>
+
+      <!-- Rear Right Wheel -->
+      <body name="re_right" pos="-0.2078 -0.252 -0.158" quat="0.707107 -0.707107 0 0">
+        <joint name="re_right_joint" type="hinge" axis="0 0 1" damping="10" frictionloss="1"/>
+        <inertial pos="0 0 -0.0103" mass="3.149" diaginertia="0.0378075 0.0222 0.0222"/>
+        <geom type="mesh" rgba="1 1 1 1" mesh="hunter_re_right" contype="0" conaffinity="0"/>
+        <geom name="re_right_contact" type="cylinder" size="0.122 0.06" condim="6"
+              friction="2.0 0.01 0.001" rgba="0 0 0 0"/>
+      </body>
+
+      <!-- LiDAR sensor (rear of chassis, above deck) -->
+      <body name="lidar" pos="-0.2 0 0.12">
+        <geom name="lidar_body" type="cylinder" size="0.05 0.03" material="lidar_mat" mass="0.3"/>
+        <site name="lidar_site" pos="0 0 0.03" size="0.01"/>
+      </body>
+
+      <!-- IMU site on chassis -->
+      <site name="imu_site" pos="0 0 0" size="0.02"/>
+
+      <!-- GEN72 7-DOF Arm mounted on top center -->
+      <body name="arm_base" pos="0 0 0">
+        <inertial pos="0 0 0.015" mass="0.6" diaginertia="0.003 0.003 0.003"/>
+        <geom type="box" size="0.1 0.1 0.015" rgba="0.3 0.3 0.3 1" pos="0 0 0.015"/>
+        <geom type="mesh" rgba="1 1 1 1" mesh="base_link" pos="0 0 0.03"/>
+        <body name="Link1" pos="0 0 0.248">
+          <inertial pos="3.54e-07 -6.04e-05 -0.0475" quat="0.707095 0.000825 -0.000815 0.707117" mass="0.511" diaginertia="0.00102 0.000959 0.000389"/>
+          <joint name="joint1" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-25 25" damping="10"/>
+          <geom type="mesh" rgba="1 1 1 1" mesh="Link1"/>
+          <body name="Link2" quat="0.707105 -0.707108 0 0">
+            <inertial pos="-7.1e-07 -0.0576 -3.88e-05" quat="0.707724 0.706489 -3.67e-05 2.79e-05" mass="0.552" diaginertia="0.00142 0.00127 0.000526"/>
+            <joint name="joint2" pos="0 0 0" axis="0 0 1" range="-1.8323 1.8323" actuatorfrcrange="-25 25" damping="10"/>
+            <geom type="mesh" rgba="1 1 1 1" mesh="Link2"/>
+            <body name="Link3" pos="0 -0.28 0" quat="0.707105 0.707108 0 0">
+              <inertial pos="0.00897 2.63e-05 -0.0738" quat="0.989785 -0.000620 0.142566 -0.00106" mass="0.774" diaginertia="0.00257 0.00249 0.000757"/>
+              <joint name="joint3" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-25 25" damping="10"/>
+              <geom type="mesh" rgba="1 1 1 1" mesh="Link3"/>
+              <body name="Link4" pos="0.04 0 0" quat="0.707105 0.707108 0 0">
+                <inertial pos="-0.00962 0.0352 0.000175" quat="0.439439 0.552618 -0.438956 0.55572" mass="0.437" diaginertia="0.000952 0.000902 0.000233"/>
+                <joint name="joint4" pos="0 0 0" axis="0 0 1" range="-2.8792 0.9597" actuatorfrcrange="-25 25" damping="10"/>
+                <geom type="mesh" rgba="1 1 1 1" mesh="Link4"/>
+                <body name="Link5" pos="-0.019 0.2525 0" quat="0.707105 -0.707108 0 0">
+                  <inertial pos="-4.78e-07 -3.85e-05 -0.067" quat="1 0.000543 1.01e-05 4.16e-05" mass="0.424" diaginertia="0.00112 0.00103 0.000275"/>
+                  <joint name="joint5" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-5 5" damping="5"/>
+                  <geom type="mesh" rgba="1 1 1 1" mesh="Link5"/>
+                  <body name="Link6" quat="0.707105 0.707108 0 0">
+                    <inertial pos="0.00184 0.038 -9.21e-05" quat="0.576988 0.408739 -0.576994 0.408774" mass="0.303" diaginertia="0.000156 0.000141 0.000132"/>
+                    <joint name="joint6" pos="0 0 0" axis="0 0 1" range="-1.707 1.783" actuatorfrcrange="-5 5" damping="5"/>
+                    <geom type="mesh" rgba="1 1 1 1" mesh="Link6"/>
+                    <body name="Link7" pos="0.0905 0.067 0" quat="0.499998 0.5 0.500002 0.5">
+                      <inertial pos="0.0002 -4.25e-08 -0.0292" quat="0.081641 0.702378 -0.081641 0.702378" mass="0.177" diaginertia="8.49e-05 6.24e-05 6.24e-05"/>
+                      <joint name="joint7" pos="0 0 0" axis="0 0 1" range="-3.0014 3.0014" actuatorfrcrange="-5 5" damping="5"/>
+                      <geom type="mesh" rgba="1 1 1 1" mesh="Link7"/>
+
+                      <!-- Intel RealSense D435 wrist camera -->
+                      <body name="d435_mount" pos="0 0.032 -0.015">
+                        <inertial pos="0 0 0" mass="0.564" diaginertia="0.003881 0.000499 0.003879"/>
+                        <geom name="d435_bracket" type="box" size="0.02 0.002 0.015" rgba="0.3 0.3 0.3 1" pos="0 -0.002 0"/>
+                        <geom name="d435_body" type="box" size="0.045 0.012 0.0125" rgba="0.15 0.15 0.15 1" pos="0 0.010 0"/>
+                        <geom name="d435_lens_left" type="cylinder" size="0.004 0.002" rgba="0.05 0.05 0.05 1" pos="0.025 0.024 0" euler="1.5708 0 0"/>
+                        <geom name="d435_lens_right" type="cylinder" size="0.004 0.002" rgba="0.05 0.05 0.05 1" pos="-0.025 0.024 0" euler="1.5708 0 0"/>
+                        <geom name="d435_lens_rgb" type="cylinder" size="0.005 0.002" rgba="0.1 0.1 0.3 1" pos="0.015 0.024 0" euler="1.5708 0 0"/>
+                        <camera name="wrist_cam" pos="0 0.03 0" euler="1.5708 0 0" fovy="60"/>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <!-- Cameras -->
+    <camera name="overhead_cam" pos="-5 15 15" euler="0.6 0 -0.3" fovy="70"/>
+    <camera name="tracking_cam" pos="2 5 3" euler="0.8 0 0.3" fovy="60"/>
+  </worldbody>
+
+  <keyframe>
+    <!-- qpos: [0:7] freejoint(x,y,z,qw,qx,qy,qz) [7:9] steer [9:13] wheels [13:20] arm -->
+    <!-- Start at waypoint 0: (-0.21, 0.28) heading 128deg = 2.234rad -->
+    <!-- Quaternion: qw=cos(1.117)=0.4384, qz=sin(1.117)=0.8988 -->
+    <key name="path_start" qpos="-0.21 0.28 0.28  0.7071 0 0 0.7071  0 0  0 0 0 0  0 -0.5 0 0 0 0.5 0"/>
+  </keyframe>
+
+  <actuator>
+    <!-- Arm actuators (indices 0-6) -->
+    <position name="actuator_joint1" joint="joint1" kp="100" ctrlrange="-3.0014 3.0014"/>
+    <position name="actuator_joint2" joint="joint2" kp="100" ctrlrange="-1.8323 1.8323"/>
+    <position name="actuator_joint3" joint="joint3" kp="100" ctrlrange="-3.0014 3.0014"/>
+    <position name="actuator_joint4" joint="joint4" kp="100" ctrlrange="-2.8792 0.9597"/>
+    <position name="actuator_joint5" joint="joint5" kp="50" ctrlrange="-3.0014 3.0014"/>
+    <position name="actuator_joint6" joint="joint6" kp="50" ctrlrange="-1.707 1.783"/>
+    <position name="actuator_joint7" joint="joint7" kp="50" ctrlrange="-3.0014 3.0014"/>
+
+    <!-- Steering actuators (indices 7-8) -->
+    <position name="actuator_steer_left" joint="fr_steer_left_joint" kp="200" ctrlrange="-0.69 0.69"/>
+    <position name="actuator_steer_right" joint="fr_steer_right_joint" kp="200" ctrlrange="-0.69 0.69"/>
+
+    <!-- Rear wheel drive actuators (indices 9-10) -->
+    <velocity name="actuator_re_left" joint="re_left_joint" kv="10"/>
+    <velocity name="actuator_re_right" joint="re_right_joint" kv="10"/>
+  </actuator>
+
+  <sensor>
+    <accelerometer name="imu_accel" site="imu_site"/>
+    <gyro name="imu_gyro" site="imu_site"/>
+  </sensor>
+</mujoco>

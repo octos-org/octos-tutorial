@@ -1,0 +1,46 @@
+{
+  "description": "dora-nav bridge tool mappings for slam-nav-sim example",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "navigate_to",
+      "dora_node_id": "planning",
+      "handler_kind": "request_response",
+      "safety_tier": "safe_motion",
+      "timeout_secs": 120,
+      "description": "Navigate Hunter SE base to a named station (A, B, home)"
+    },
+    {
+      "name": "get_robot_state",
+      "dora_node_id": "pub-road",
+      "handler_kind": "observe",
+      "safety_tier": "observe",
+      "timeout_secs": 5,
+      "description": "Read current robot position, heading, and station"
+    },
+    {
+      "name": "get_map",
+      "dora_node_id": "road-lane-publisher",
+      "handler_kind": "observe",
+      "safety_tier": "observe",
+      "timeout_secs": 10,
+      "description": "Get warehouse SLAM map with station waypoints"
+    },
+    {
+      "name": "stop_base",
+      "dora_node_id": "lon-control",
+      "handler_kind": "request_response",
+      "safety_tier": "safe_motion",
+      "timeout_secs": 5,
+      "description": "Emergency stop the mobile base"
+    },
+    {
+      "name": "read_lidar",
+      "dora_node_id": "pub-road",
+      "handler_kind": "observe",
+      "safety_tier": "observe",
+      "timeout_secs": 5,
+      "description": "Read LiDAR sensor parameters and status"
+    }
+  ]
+}

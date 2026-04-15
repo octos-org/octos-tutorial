@@ -1,0 +1,174 @@
+# dataflow_obstacle_avoidance.yaml — Navigation with obstacle avoidance
+#
+# 13-node dataflow: base nav (10 nodes) + obstacle avoidance (3 nodes)
+#   - obstacle-detector: LiDAR pointcloud → obstacle list (clustering)
+#   - costmap: LiDAR pointcloud → 2D occupancy grid with inflation
+#   - recovery-monitor: stuck detection + recovery commands
+#
+# Prerequisites:
+#   pip install dora-rs pyarrow numpy scipy mujoco rerun-sdk
+#
+# Run:
+#   dora up && dora start dataflow_obstacle_avoidance.yaml --attach
+
+nodes:
+  # =======================================
+  # MuJoCo Simulation
+  # =======================================
+
+  - id: mujoco-sim
+    path: dora-mujoco/dora_mujoco/main.py
+    inputs:
+      tick: dora/timer/millis/10
+      wheel_control: nav-bridge/wheel_commands
+    outputs:
+      - joint_positions
+      - pointcloud
+    env:
+      MODEL_NAME: models/hunter_se_warehouse.xml
+      MUJOCO_GL: glfw
+      NAV_MODE: "1"
+      PHYSICS_STEPS: "5"
+      LIDAR_RAYS: "360"
+      LIDAR_VERTICAL_BEAMS: "16"
+      LIDAR_RANGE: "100.0"
+      LIDAR_MIN_RANGE: "0.5"
+      LIDAR_BODY_NAME: "lidar"
+      ROBOT_BODY_NAME: "hunter_base"
+      POINTCLOUD_RATE: "10"
+
+  # =======================================
+  # Pose Extractor
+  # =======================================
+
+  - id: pose-extractor
+    path: nodes/pose_extractor_node.py
+    inputs:
+      joint_positions: mujoco-sim/joint_positions
+    outputs:
+      - ground_truth_pose
+
+  # =======================================
+  # Base Navigation Pipeline
+  # =======================================
+
+  - id: pub-road
+    path: nodes/pub_road_node.py
+    inputs:
+      tick: dora/timer/millis/200
+    outputs:
+      - road_lane
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+
+  - id: road-lane-publisher
+    path: nodes/road_lane_publisher_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose: pose-extractor/ground_truth_pose
+    outputs:
+      - cur_pose_all
+
+  - id: task-pub-stub
+    path: nodes/task_pub_stub.py
+    inputs:
+      tick: dora/timer/millis/100
+    outputs:
+      - road_attri_msg
+
+  # =======================================
+  # Obstacle Avoidance (3 nodes)
+  # =======================================
+
+  - id: obstacle-detector
+    path: nodes/obstacle_detector_node.py
+    inputs:
+      pointcloud: mujoco-sim/pointcloud
+      ground_truth_pose: pose-extractor/ground_truth_pose
+      road_lane: pub-road/road_lane
+    outputs:
+      - obstacle_list
+    env:
+      GROUND_THRESHOLD: "0.15"
+      MAX_DETECT_RANGE: "15.0"
+      CLUSTER_TOLERANCE: "0.5"
+
+  - id: costmap
+    path: nodes/costmap_node.py
+    inputs:
+      pointcloud: mujoco-sim/pointcloud
+      ground_truth_pose: pose-extractor/ground_truth_pose
+    outputs:
+      - costmap_grid
+    env:
+      COSTMAP_RESOLUTION: "0.1"
+      COSTMAP_SIZE_M: "20.0"
+      INFLATION_RADIUS: "0.5"
+
+  - id: recovery-monitor
+    path: nodes/recovery_monitor_node.py
+    inputs:
+      ground_truth_pose: pose-extractor/ground_truth_pose
+      Request: planning/Request
+    outputs:
+      - recovery_cmd
+
+  # =======================================
+  # Obstacle-Aware Planning
+  # =======================================
+
+  - id: planning
+    path: nodes/planning_node.py
+    inputs:
+      road_lane: pub-road/road_lane
+      cur_pose_all: road-lane-publisher/cur_pose_all
+      road_attri_msg: task-pub-stub/road_attri_msg
+      obstacle_list: obstacle-detector/obstacle_list
+      costmap_grid: costmap/costmap_grid
+      recovery_cmd: recovery-monitor/recovery_cmd
+    outputs:
+      - raw_path
+      - Request
+
+  - id: lon-control
+    path: nodes/lon_controller_node.py
+    inputs:
+      Request: planning/Request
+    outputs:
+      - TrqBreCmd
+
+  - id: lat-control
+    path: nodes/lat_controller_node.py
+    inputs:
+      raw_path: planning/raw_path
+    outputs:
+      - SteeringCmd
+
+  # =======================================
+  # Rerun 3D Visualization (obstacles + costmap)
+  # =======================================
+
+  - id: rerun
+    path: nodes/rerun_viz_node.py
+    inputs:
+      raw_path: planning/raw_path
+      cur_pose: pose-extractor/ground_truth_pose
+      obstacle_list: obstacle-detector/obstacle_list
+      costmap_grid: costmap/costmap_grid
+    env:
+      WAYPOINTS_FILE: "Waypoints.txt"
+      MAP_PCD_FILE: "table_scene_lms400.pcd"
+
+  # =======================================
+  # Navigation Bridge
+  # =======================================
+
+  - id: nav-bridge
+    path: nodes/nav_bridge_node.py
+    inputs:
+      ground_truth_pose: pose-extractor/ground_truth_pose
+      SteeringCmd: lat-control/SteeringCmd
+      TrqBreCmd: lon-control/TrqBreCmd
+    outputs:
+      - skill_result
+      - wheel_commands

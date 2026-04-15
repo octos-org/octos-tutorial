@@ -1,0 +1,55 @@
+// cyclic_patrol.dot — Continuous patrol loop (2 cycles)
+//
+// Robot patrols A → B → home, repeating 2 times.
+// Demonstrates CyclicPipelineExecutor with max_cycles.
+
+digraph cyclic_patrol {
+    label = "Cyclic Patrol";
+    graph [cycle=true max_cycles=2];
+
+    check [
+        label="check_state"
+        tool="get_robot_state"
+    ];
+
+    nav_a [
+        label="navigate_to_A"
+        tool="navigate_to"
+        args='{"waypoint": "A"}'
+        deadline="120"
+        checkpoint="at_A"
+    ];
+
+    lidar_a [
+        label="lidar_A"
+        tool="read_lidar"
+    ];
+
+    nav_b [
+        label="navigate_to_B"
+        tool="navigate_to"
+        args='{"waypoint": "B"}'
+        deadline="120"
+        checkpoint="at_B"
+    ];
+
+    lidar_b [
+        label="lidar_B"
+        tool="read_lidar"
+    ];
+
+    nav_home [
+        label="navigate_home"
+        tool="navigate_to"
+        args='{"waypoint": "home"}'
+        deadline="120"
+        checkpoint="at_home"
+    ];
+
+    check -> nav_a;
+    nav_a -> lidar_a;
+    lidar_a -> nav_b;
+    nav_b -> lidar_b;
+    lidar_b -> nav_home;
+    nav_home -> check;
+}

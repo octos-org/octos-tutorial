@@ -1,0 +1,26 @@
+# 01-pipeline-basics — Octos DOT pipeline with mock robot
+#
+# 2-node dataflow: agent executes a patrol pipeline, mock-robot responds.
+# No MuJoCo, no LLM — just the pipeline engine calling tools in order.
+#
+# Run:
+#   cd 01-pipeline-basics
+#   dora up && dora start dataflow.yaml --attach
+
+nodes:
+  - id: mock-robot
+    path: nodes/mock_robot_node.py
+    inputs:
+      skill_request: agent/skill_request
+    outputs:
+      - skill_result
+
+  - id: agent
+    path: nodes/agent_node.py
+    inputs:
+      skill_result: mock-robot/skill_result
+    outputs:
+      - skill_request
+    env:
+      OCTOS_PIPELINE: "patrol.dot"
+      USER_COMMAND: "Patrol stations A, B, then return home"

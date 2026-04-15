@@ -1,0 +1,11 @@
+# Core (all examples)
+dora-rs
+pyarrow
+numpy
+
+# Visual simulation (05-slam-nav-sim only)
+# mujoco
+# rerun-sdk
+
+# LLM examples (03, 04)
+# openai  # or use ollama locally

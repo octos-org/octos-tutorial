@@ -1,0 +1,32 @@
+# 02-safety-tiers — Permission gating demo
+#
+# safe-robot is locked to OBSERVE tier. The agent tries all 6 tools:
+#   observe tools (get_robot_state, get_map, read_lidar) → ALLOWED
+#   motion tools (navigate_to, stop_base) → DENIED
+#   actuation tools (scan_station) → DENIED
+#
+# Change SAFETY_TIER to "safe_motion" or "full_actuation" to unlock more tools.
+#
+# Run:
+#   cd 02-safety-tiers
+#   dora up && dora start dataflow.yaml --attach
+
+nodes:
+  - id: safe-robot
+    path: nodes/safe_robot_node.py
+    inputs:
+      skill_request: agent/skill_request
+    outputs:
+      - skill_result
+    env:
+      SAFETY_TIER: "observe"
+
+  - id: agent
+    path: nodes/agent_node.py
+    inputs:
+      skill_result: safe-robot/skill_result
+    outputs:
+      - skill_request
+    env:
+      OCTOS_PIPELINE: "test_all_tools.dot"
+      USER_COMMAND: "Test all tools to discover which are allowed at current tier"

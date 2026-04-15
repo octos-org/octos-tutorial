@@ -1,0 +1,26 @@
+// test_all_tools.dot — Try every tool to discover tier permissions
+//
+// With SAFETY_TIER=observe, observe tools succeed but motion tools are denied.
+// With SAFETY_TIER=safe_motion, motion tools also succeed.
+
+digraph test_all_tools {
+    label = "Permission Discovery";
+
+    // Observe tier tools (should always work)
+    t1 [label="get_robot_state" tool="get_robot_state"];
+    t2 [label="get_map" tool="get_map"];
+    t3 [label="read_lidar" tool="read_lidar"];
+
+    // Safe motion tier tools (denied at observe)
+    t4 [label="navigate_to_A" tool="navigate_to" args='{"waypoint": "A"}'];
+    t5 [label="stop_base" tool="stop_base"];
+
+    // Full actuation tier (denied at observe and safe_motion)
+    t6 [label="scan_station" tool="scan_station"];
+
+    t1 -> t2;
+    t2 -> t3;
+    t3 -> t4;
+    t4 -> t5;
+    t5 -> t6;
+}
