@@ -1,5 +1,7 @@
 # DOT Pipeline Guide
 
+> **⚠️ Frozen (April 2026).** This guide describes the dora-rs robotics milestone as of April 2026 and has not been updated since. Two of the three install paths below no longer work: `cargo install octos-cli` fails because the kernel publishes no crates.io artifacts (see octos-org/octos#2395), and the `octos-dora-agent` binary does not exist in the workspace (only `octos-dora-mcp`). The third path — `octos serve` + MCP bridge — remains valid. Tracking: octos-org/octos-tutorial#3.
+
 ## Overview
 
 Octos pipelines are defined as DOT (Graphviz) directed graphs. Each node represents a step — a tool call, a gate, or an LLM reasoning task. Edges define execution order.
